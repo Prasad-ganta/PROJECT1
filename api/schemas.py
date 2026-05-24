@@ -15,7 +15,7 @@ class DailyRouteResponse(BaseModel):
     recommended_route: List[str]
     predicted_time: str
     confidence: float
-    map_url: str
+    map_url: str | None = None
 
 # WEEKLY
 
