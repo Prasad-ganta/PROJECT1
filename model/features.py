@@ -18,9 +18,8 @@ def create_features(
     df.columns = df.columns.str.strip()
     print("Columns found:", df.columns.tolist())
 
-    # =========================
     # DATE / TIME FEATURES
-    # =========================
+ 
 
     df["Date"] = pd.to_datetime(df["Date"], format="%d-%b-%Y", errors="coerce")
 
@@ -30,9 +29,8 @@ def create_features(
 
     df["Is_Weekend"] = df["Day_Of_Week"].isin(["Saturday", "Sunday"]).astype(int)
 
-    # =========================
     # TRAFFIC FEATURE
-    # =========================
+
 
     def traffic(hour):
         if pd.isna(hour):
@@ -46,26 +44,24 @@ def create_features(
         return 0
 
     df["Traffic_Level"] = df["Hour"].apply(traffic)
-
-    # =========================
+    
     # ENCODING FEATURES
     # Driver_ID is not in this dataset — use Stop_Name only
-    # =========================
+  
 
     stop_encoder = LabelEncoder()
     df["Stop_Encoded"] = stop_encoder.fit_transform(df["Stop_Name"].astype(str))
 
-    # =========================
     # LOCATION CLUSTERING
-    # =========================
+   
 
     n_clusters = min(5, len(df))
     kmeans = KMeans(n_clusters=n_clusters, random_state=42, n_init="auto")
     df["Cluster"] = kmeans.fit_predict(df[["Latitude", "Longitude"]])
 
-    # =========================
+
     # STOP FEATURES
-    # =========================
+
 
     df["Stop_Frequency"] = df.groupby("Stop_Name")["Stop_Name"].transform("count")
 
@@ -75,15 +71,13 @@ def create_features(
     # Daily visits per stop per date
     df["Daily_Visits"] = df.groupby(["Stop_Name", "Date"])["Stop_Name"].transform("count")
 
-    # =========================
-    # ROUTE FEATURE
-    # =========================
+       # ROUTE FEATURE
+
 
     df["Route_Efficiency"] = df["Visit_Duration_Min"] / (df["Travel_Next_Min"] + 1)
 
-    # =========================
     # CLEAN DATA
-    # =========================
+  
 
     df = df.dropna(subset=[
         "Hour", "Is_Weekend", "Traffic_Level", "Cluster",
@@ -94,17 +88,15 @@ def create_features(
 
     print("Processed data shape:", df.shape)
 
-    # =========================
     # SAVE PROCESSED DATA
-    # =========================
+ 
 
     Path(output_path).parent.mkdir(parents=True, exist_ok=True)
     df.to_csv(output_path, index=False)
     print(f"Saved processed data → {output_path}")
 
-    # =========================
     # SAVE ENCODERS
-    # =========================
+ 
 
     Path(encoders_path).parent.mkdir(parents=True, exist_ok=True)
     joblib.dump(
