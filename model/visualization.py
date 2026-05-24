@@ -1,31 +1,34 @@
-import folium
-import uuid
+import googlemaps
 import os
 
-def visualize_route_map(route, coords):
+GMAPS_KEY = os.getenv("GOOGLE_MAPS_API_KEY")
+gmaps = googlemaps.Client(key=GMAPS_KEY)
 
-    if not route or not coords:
-        return None
+def visualize_route_map(locations, coordinates):
 
-    start = coords[route[0]]
-    m = folium.Map(location=start, zoom_start=12)
+    waypoints = [coordinates[loc] for loc in locations if loc in coordinates]
 
-    points = []
+    origin = waypoints[0]
+    destination = waypoints[-1]
 
-    for stop in route:
-        if stop in coords:
-            lat, lon = coords[stop]
-            points.append((lat, lon))
-            folium.Marker([lat, lon], tooltip=stop).add_to(m)
+    result = gmaps.directions(
+        origin=origin,
+        destination=destination,
+        waypoints=waypoints[1:-1],
+        optimize_waypoints=True,
+        departure_time="now"
+    )
 
-    if len(points) > 1:
-        folium.PolyLine(points, color="blue").add_to(m)
+    route = result[0]
 
-    os.makedirs("static", exist_ok=True)
+    # --------------------------
+    # BUILD GOOGLE MAPS URL
+    # --------------------------
+    url = (
+        "https://www.google.com/maps/dir/?api=1"
+        f"&origin={origin[0]},{origin[1]}"
+        f"&destination={destination[0]},{destination[1]}"
+        f"&travelmode=driving"
+    )
 
-    file_id = str(uuid.uuid4())
-    file_path = f"static/{file_id}.html"
-
-    m.save(file_path)
-
-    return f"http://127.0.0.1:8000/static/{file_id}.html"
+    return url
