@@ -4,6 +4,7 @@ from api.dependencies import get_distance_matrix, get_xgboost_model
 
 from model.optimizer import solve_route
 from model.confidence import calculate_confidence
+from model.monitoring import log_prediction
 from model.visualization import visualize_route_map
 
 import pandas as pd
@@ -12,16 +13,6 @@ import logging
 
 router = APIRouter()
 logger = logging.getLogger("trip_optimizer")
-
-
-# =========================
-# SAFE DISTANCE HELPER
-# =========================
-def safe_distance(matrix, a, b):
-    try:
-        return matrix[a][b]
-    except:
-        return None
 
 
 # =========================
@@ -63,13 +54,12 @@ async def predict_daily_route(
 
     log_prediction(logger=logger, model="xgboost", duration=hours, confidence=confidence)
 
-    # -----------------------------
-    # MAP GENERATION (SAFE)
-    # -----------------------------
-    google_map_url, dashboard_map_url = visualize_route_map(
-        route,
-        distance_matrix  # using coords fallback (IMPORTANT)
-    )
+    # IMPORTANT: coordinates must exist
+    coordinates = getattr(distance_matrix, "coordinates", None)
+
+    map_url = None
+    if coordinates:
+        map_url = visualize_route_map(route, coordinates)
 
     return {
         "driver_id": request.driver_id,
@@ -77,13 +67,12 @@ async def predict_daily_route(
         "recommended_route": route,
         "predicted_time": f"{hours} hours",
         "confidence": confidence,
-
-        # ✅ BOTH MAPS
-        "map_url": google_map_url,
-        "route_preview": dashboard_map_url
+        "map_url": map_url
     }
+
+
 # =========================
-# WEEKLY ROUTE (FIXED REALISTIC)
+# WEEKLY ROUTE (REAL FIX)
 # =========================
 @router.post("/predict/weekly")
 async def predict_weekly_route(
@@ -105,39 +94,18 @@ async def predict_weekly_route(
     total_distance = 0
 
     for day in days:
-        stops = driver_df[driver_df["Day_Of_Week"] == day]["Stop_Name"].tolist()
+        stops = driver_df[driver_df["Day_Of_Week"] == day]["Stop_Name"].tolist()[:3]
+        weekly_plan[day.lower()] = stops
 
-        # fallback if empty
-        if len(stops) < 2:
-            stops = ["Hub Center", "Store A", "Depot B"]
-
-        weekly_plan[day.lower()] = stops[:3]
-
-        # REAL DISTANCE CALC
         for i in range(len(stops) - 1):
             a, b = stops[i], stops[i + 1]
 
-            dist = safe_distance(distance_matrix, a, b)
-
-            if dist is None:
-                # fallback heuristic distance (IMPORTANT FIX)
-                dist = np.random.uniform(2.0, 8.0)
-
-            total_distance += dist
+            if a in distance_matrix and b in distance_matrix[a]:
+                total_distance += distance_matrix[a][b]
 
     return {
         "driver_id": request.driver_id,
         "week": request.week,
         **weekly_plan,
-        "weekly_distance_km": round(total_distance, 2)
+        "weekly_distance_km": round(total_distance / 1000, 2)
     }
-
-
-# =========================
-# RETRAIN
-# =========================
-@router.post("/retrain")
-async def retrain_model():
-    import subprocess
-    subprocess.Popen(["python", "scripts/retrain_pipeline.py"])
-    return {"status": "success"}
