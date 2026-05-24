@@ -1,10 +1,8 @@
 from typing import List
 from pydantic import BaseModel
 
-
-# =====================
 # DAILY
-# =====================
+
 class DailyRouteRequest(BaseModel):
     driver_id: str
     date: str
@@ -19,10 +17,8 @@ class DailyRouteResponse(BaseModel):
     confidence: float
     map_url: str
 
-
-# =====================
 # WEEKLY
-# =====================
+
 class WeeklyRouteRequest(BaseModel):
     driver_id: str
     week: str   # FIXED (you were missing this earlier)
