@@ -1,7 +1,13 @@
 import os
 
 def visualize_route_map(locations, coordinates):
-    GMAPS_KEY = os.getenv("GOOGLE_MAPS_API_KEY")
+    """
+    Returns Google Maps URL (always works)
+    Optional: uses Google API if key exists
+    """
+
+    if not locations or not coordinates:
+        return None
 
     waypoints = [coordinates[loc] for loc in locations if loc in coordinates]
 
@@ -11,6 +17,9 @@ def visualize_route_map(locations, coordinates):
     origin = waypoints[0]
     destination = waypoints[-1]
 
+    # -----------------------------
+    # ALWAYS WORKING GOOGLE MAP URL
+    # -----------------------------
     base_url = "https://www.google.com/maps/dir/?api=1"
 
     url = (
@@ -20,10 +29,15 @@ def visualize_route_map(locations, coordinates):
         f"&travelmode=driving"
     )
 
-    # OPTIONAL Google API (DO NOT CRASH)
+    # -----------------------------
+    # OPTIONAL GOOGLE API (SAFE)
+    # -----------------------------
+    GMAPS_KEY = os.getenv("GOOGLE_MAPS_API_KEY")
+
     if GMAPS_KEY:
         try:
             import googlemaps
+
             gmaps = googlemaps.Client(key=GMAPS_KEY)
 
             gmaps.directions(
@@ -33,6 +47,7 @@ def visualize_route_map(locations, coordinates):
                 optimize_waypoints=True,
                 departure_time="now"
             )
+
         except Exception as e:
             print("Google Maps API error:", e)
 
