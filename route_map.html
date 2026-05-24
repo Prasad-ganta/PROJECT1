@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html>
+<head>
+    
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap-glyphicons.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.2.0/css/all.min.css"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/python-visualization/folium/folium/templates/leaflet.awesome.rotate.min.css"/>
+    
+            <meta name="viewport" content="width=device-width,
+                initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+            <style>
+                #map_849713084c58d5ac0c7da0bea60725bd {
+                    position: relative;
+                    width: 100.0%;
+                    height: 100.0%;
+                    left: 0.0%;
+                    top: 0.0%;
+                }
+                .leaflet-container { font-size: 1rem; }
+            </style>
+
+            <style>html, body {
+                width: 100%;
+                height: 100%;
+                margin: 0;
+                padding: 0;
+            }
+            </style>
+
+            <style>#map {
+                position:absolute;
+                top:0;
+                bottom:0;
+                right:0;
+                left:0;
+                }
+            </style>
+
+            <script>
+                L_NO_TOUCH = false;
+                L_DISABLE_3D = false;
+            </script>
+
+        
+</head>
+<body>
+    
+    
+            <div class="folium-map" id="map_849713084c58d5ac0c7da0bea60725bd" ></div>
+        
+</body>
+<script>
+    
+    
+            var map_849713084c58d5ac0c7da0bea60725bd = L.map(
+                "map_849713084c58d5ac0c7da0bea60725bd",
+                {
+                    center: [17.445, 78.527],
+                    crs: L.CRS.EPSG3857,
+                    ...{
+  "zoom": 12,
+  "zoomControl": true,
+  "preferCanvas": false,
+}
+
+                }
+            );
+
+            
+
+        
+    
+            var tile_layer_6aca815fcd826d32e98ba4091766e868 = L.tileLayer(
+                "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+                {
+  "minZoom": 0,
+  "maxZoom": 19,
+  "maxNativeZoom": 19,
+  "noWrap": false,
+  "attribution": "\u0026copy; \u003ca href=\"https://www.openstreetmap.org/copyright\"\u003eOpenStreetMap\u003c/a\u003e contributors",
+  "subdomains": "abc",
+  "detectRetina": false,
+  "tms": false,
+  "opacity": 1,
+}
+
+            );
+        
+    
+            tile_layer_6aca815fcd826d32e98ba4091766e868.addTo(map_849713084c58d5ac0c7da0bea60725bd);
+        
+    
+            var marker_b7c52aae989c2bcd37e2d6fb1d1f2463 = L.marker(
+                [17.445, 78.527],
+                {
+}
+            ).addTo(map_849713084c58d5ac0c7da0bea60725bd);
+        
+    
+        var popup_2210781c9828a7984febddb670ba017d = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_a12ebd92a0039215d268e4de605781db = $(`<div id="html_a12ebd92a0039215d268e4de605781db" style="width: 100.0%; height: 100.0%;">Shopping Center</div>`)[0];
+                popup_2210781c9828a7984febddb670ba017d.setContent(html_a12ebd92a0039215d268e4de605781db);
+            
+        
+
+        marker_b7c52aae989c2bcd37e2d6fb1d1f2463.bindPopup(popup_2210781c9828a7984febddb670ba017d)
+        ;
+
+        
+    
+    
+            var marker_6dc15a895e7c7feaa7b0ed37de8678b7 = L.marker(
+                [17.375, 78.48],
+                {
+}
+            ).addTo(map_849713084c58d5ac0c7da0bea60725bd);
+        
+    
+        var popup_bdd1c9bac8a76a95efe9af77175d1630 = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_93bedc01554b7c95208b9e50aff100c1 = $(`<div id="html_93bedc01554b7c95208b9e50aff100c1" style="width: 100.0%; height: 100.0%;">Store C</div>`)[0];
+                popup_bdd1c9bac8a76a95efe9af77175d1630.setContent(html_93bedc01554b7c95208b9e50aff100c1);
+            
+        
+
+        marker_6dc15a895e7c7feaa7b0ed37de8678b7.bindPopup(popup_bdd1c9bac8a76a95efe9af77175d1630)
+        ;
+
+        
+    
+    
+            var marker_5eadf391bff6a71bc0ecf3e64fbc2d2a = L.marker(
+                [17.345, 78.455],
+                {
+}
+            ).addTo(map_849713084c58d5ac0c7da0bea60725bd);
+        
+    
+        var popup_7b52498c089565b25f954cd4916ea8c4 = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_2bce81460f00aa4489cc670e6f04982b = $(`<div id="html_2bce81460f00aa4489cc670e6f04982b" style="width: 100.0%; height: 100.0%;">Depot B</div>`)[0];
+                popup_7b52498c089565b25f954cd4916ea8c4.setContent(html_2bce81460f00aa4489cc670e6f04982b);
+            
+        
+
+        marker_5eadf391bff6a71bc0ecf3e64fbc2d2a.bindPopup(popup_7b52498c089565b25f954cd4916ea8c4)
+        ;
+
+        
+    
+    
+            var marker_b0080d25dd3d0d41516365ec7b9683be = L.marker(
+                [17.395, 78.43],
+                {
+}
+            ).addTo(map_849713084c58d5ac0c7da0bea60725bd);
+        
+    
+        var popup_470385582536cde60d392defd478ae72 = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_3bc9111dcade6f3eea450cf37939746f = $(`<div id="html_3bc9111dcade6f3eea450cf37939746f" style="width: 100.0%; height: 100.0%;">Hub West</div>`)[0];
+                popup_470385582536cde60d392defd478ae72.setContent(html_3bc9111dcade6f3eea450cf37939746f);
+            
+        
+
+        marker_b0080d25dd3d0d41516365ec7b9683be.bindPopup(popup_470385582536cde60d392defd478ae72)
+        ;
+
+        
+    
+    
+            var poly_line_54369a5fc4f3f588e21018bc5602ffb1 = L.polyline(
+                [[17.445, 78.527], [17.375, 78.48], [17.345, 78.455], [17.395, 78.43]],
+                {"bubblingMouseEvents": true, "color": "blue", "dashArray": null, "dashOffset": null, "fill": false, "fillColor": "blue", "fillOpacity": 0.2, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 1.0, "smoothFactor": 1.0, "stroke": true, "weight": 5}
+            ).addTo(map_849713084c58d5ac0c7da0bea60725bd);
+        
+</script>
+</html>
