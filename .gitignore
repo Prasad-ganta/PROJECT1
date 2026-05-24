@@ -1,7 +1,10 @@
 venv/
 __pycache__/
 data/
+<<<<<<< HEAD
 models/
+=======
+>>>>>>> 594b98c8825c4f24142781ee0010163b96bc2132
 *.h5
 *.pt
 *.csv

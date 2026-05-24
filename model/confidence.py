@@ -1,9 +1,7 @@
 from typing import Any
 
-
-# =====================================================
 # FEATURE-BASED CONFIDENCE
-# =====================================================
+
 
 def compute_confidence(
     features: dict[str, Any]
@@ -43,10 +41,8 @@ def compute_confidence(
         2
     )
 
-
-# =====================================================
 # ROUTE CONFIDENCE
-# =====================================================
+
 
 def calculate_confidence(
     total_eta_minutes: float

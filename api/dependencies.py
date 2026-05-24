@@ -2,9 +2,7 @@ import json
 import joblib
 
 
-# =========================================
 # LOAD XGBOOST MODEL
-# =========================================
 
 def get_xgboost_model():
 
@@ -14,10 +12,8 @@ def get_xgboost_model():
 
     return model
 
-
-# =========================================
 # LOAD DISTANCE MATRIX
-# =========================================
+
 
 def get_distance_matrix():
 
@@ -31,9 +27,8 @@ def get_distance_matrix():
     return matrix
 
 
-# =========================================
 # LOAD LABEL ENCODERS
-# =========================================
+
 
 def get_label_encoders():
 
