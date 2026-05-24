@@ -25,50 +25,79 @@ async def predict_daily_route(
     xgb_model=Depends(get_xgboost_model)
 ):
 
-    if not request.locations:
-        raise HTTPException(400, "locations required")
+    try:
 
-    for loc in request.locations:
-        if loc not in distance_matrix:
-            raise HTTPException(404, f"{loc} not found")
+        if not request.locations:
+            raise HTTPException(400, "locations required")
 
-    filtered = {
-        i: {j: distance_matrix[i][j] for j in request.locations}
-        for i in request.locations
-    }
+        # --------------------------
+        # SAFE FILTER (NO CRASH)
+        # --------------------------
+        filtered = {}
 
-    route = solve_route(filtered)
+        for i in request.locations:
+            if i not in distance_matrix:
+                raise HTTPException(404, f"{i} not found in matrix")
 
-    total_minutes = 0
+            filtered[i] = {}
 
-    for i in range(len(route) - 1):
-        src, dst = route[i], route[i + 1]
-        dist = filtered[src][dst]
+            for j in request.locations:
+                if j not in distance_matrix[i]:
+                    raise HTTPException(404, f"{j} not found in matrix[{i}]")
 
-        features = np.array([[dist, 0, 1, 0, 30, 0, 0, dist / 2, len(route), 1]])
+                filtered[i][j] = distance_matrix[i][j]
 
-        total_minutes += float(xgb_model.predict(features)[0])
+        # --------------------------
+        # ROUTE OPTIMIZATION SAFE
+        # --------------------------
+        route = solve_route(filtered)
 
-    hours = round(total_minutes / 60, 2)
-    confidence = calculate_confidence(total_minutes)
+        if not route or len(route) < 2:
+            raise HTTPException(500, "Route optimization failed")
 
-    # =========================
-    # MAP FIX (IMPORTANT)
-    # =========================
-    google_map, preview_map = visualize_route_map(route, distance_matrix)
+        # --------------------------
+        # ETA CALC SAFE
+        # --------------------------
+        total_minutes = 0
 
-    log_prediction(logger=logger, model="xgboost", duration=hours, confidence=confidence)
+        for i in range(len(route) - 1):
 
-    return {
-        "driver_id": request.driver_id,
-        "date": request.date,
-        "recommended_route": route,
-        "predicted_time": f"{hours} hours",
-        "confidence": confidence,
-        "map_url": google_map,
-        "route_preview": preview_map
-    }
+            src, dst = route[i], route[i + 1]
 
+            dist = filtered[src][dst]
+
+            features = np.array([[dist, 0, 1, 0, 30, 0, 0, dist / 2, len(route), 1]])
+
+            pred = xgb_model.predict(features)
+
+            total_minutes += float(pred[0])
+
+        hours = round(total_minutes / 60, 2)
+
+        confidence = calculate_confidence(total_minutes)
+
+        # --------------------------
+        # MAP SAFE CALL
+        # --------------------------
+        from model.visualization import visualize_route_map
+
+        map_url, preview_url = visualize_route_map(route, distance_matrix)
+
+        log_prediction(logger=logger, model="xgboost", duration=hours, confidence=confidence)
+
+        return {
+            "driver_id": request.driver_id,
+            "date": request.date,
+            "recommended_route": route,
+            "predicted_time": f"{hours} hours",
+            "confidence": confidence,
+            "map_url": map_url,
+            "route_preview": preview_url
+        }
+
+    except Exception as e:
+        logger.error(f"Daily route error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 # =========================
 # WEEKLY ROUTE (FIXED CLEAN)
