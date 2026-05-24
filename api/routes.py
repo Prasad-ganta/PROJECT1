@@ -18,18 +18,14 @@ import logging
 router = APIRouter()
 logger = logging.getLogger("trip_optimizer")
 
-
-# =====================================================
 # HEALTH CHECK
-# =====================================================
+
 @router.get("/health")
 async def health():
     return {"status": "ok"}
 
-
-# =====================================================
 # FEATURE ENGINEERING (NO STATIC VALUES)
-# =====================================================
+
 def build_features(src, dst, request, distance_matrix, df):
 
     return [[
@@ -46,9 +42,7 @@ def build_features(src, dst, request, distance_matrix, df):
     ]]
 
 
-# =====================================================
 # DAILY ROUTE PREDICTION (FIXED + NON STATIC)
-# =====================================================
 @router.post("/predict/daily")
 async def predict_daily_route(
     request: DailyRouteRequest,
@@ -58,10 +52,8 @@ async def predict_daily_route(
 
     df = pd.read_csv("data/raw/trips.csv")
     df.columns = df.columns.str.strip()
-
-    # -------------------------
+    
     # VALIDATE INPUT LOCATIONS
-    # -------------------------
     filtered = {}
 
     for src in request.locations:
@@ -76,17 +68,16 @@ async def predict_daily_route(
 
             filtered[src][dst] = distance_matrix[src][dst]
 
-    # -------------------------
+
     # OPTIMIZED ROUTE
-    # -------------------------
+
     route = solve_route(filtered)
 
     if not route:
         raise HTTPException(status_code=500, detail="Route optimization failed")
 
-    # -------------------------
     # ETA PREDICTION (REAL DYNAMIC)
-    # -------------------------
+    
     total_eta = 0.0
 
     for i in range(len(route) - 1):
@@ -107,14 +98,13 @@ async def predict_daily_route(
 
     predicted_hours = round(total_eta / 60, 2)
 
-    # -------------------------
+  
     # CONFIDENCE (SAFE RANGE)
-    # -------------------------
+
     confidence = max(0.5, min(0.99, 1 - (total_eta / 1000)))
 
-    # -------------------------
     # REAL COORDINATES FROM DATASET
-    # -------------------------
+
     coords = {}
 
     for loc in route:
@@ -126,25 +116,22 @@ async def predict_daily_route(
                 float(row.iloc[0]["Longitude"])
             ]
 
-    # -------------------------
     # MAP GENERATION (REAL URL)
-    # -------------------------
+
     try:
         map_url = visualize_route_map(route, coords)
     except Exception:
         map_url = None
 
-    # -------------------------
     # LOGGING
-    # -------------------------
+    
     try:
         log_prediction(logger, "xgboost", predicted_hours, confidence)
     except Exception:
         pass
 
-    # -------------------------
     # RESPONSE
-    # -------------------------
+   
     return {
         "driver_id": request.driver_id,
         "date": request.date,
@@ -155,9 +142,9 @@ async def predict_daily_route(
     }
 
 
-# =====================================================
+
 # WEEKLY ROUTE (NO STATIC DISTANCE)
-# =====================================================
+
 @router.post("/predict/weekly")
 async def predict_weekly_route(request: WeeklyRouteRequest):
 
@@ -194,9 +181,9 @@ async def predict_weekly_route(request: WeeklyRouteRequest):
     }
 
 
-# =====================================================
+
 # RETRAIN MODEL
-# =====================================================
+
 import subprocess
 
 @router.post("/retrain")
