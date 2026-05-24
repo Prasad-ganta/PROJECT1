@@ -1,37 +1,95 @@
-from itertools import permutations
+from ortools.constraint_solver import (
+    pywrapcp,
+    routing_enums_pb2
+)
+
+
+# SOLVE ROUTE USING OR-TOOLS
 
 
 def solve_route(distance_matrix):
-    """
-    Simple but SAFE TSP solver (works for assignment + deployment)
-    Returns best route based on minimum distance
-    """
 
-    nodes = list(distance_matrix.keys())
+    locations = list(distance_matrix.keys())
 
-    if len(nodes) < 2:
-        return nodes
+    num_locations = len(locations)
 
-    best_route = None
-    best_cost = float("inf")
+    # CREATE ROUTING INDEX MANAGER
 
-    # try all permutations (safe for small assignment datasets)
-    for perm in permutations(nodes):
+    manager = pywrapcp.RoutingIndexManager(
+        num_locations,
+        1,
+        0
+    )
 
-        cost = 0
-        valid = True
+    # CREATE ROUTING MODEL
 
-        for i in range(len(perm) - 1):
-            a, b = perm[i], perm[i + 1]
+    routing = pywrapcp.RoutingModel(manager)
 
-            if b not in distance_matrix[a]:
-                valid = False
-                break
+    # DISTANCE CALLBACK
 
-            cost += distance_matrix[a][b]
+    def distance_callback(from_index, to_index):
 
-        if valid and cost < best_cost:
-            best_cost = cost
-            best_route = perm
+        from_node = manager.IndexToNode(from_index)
 
-    return list(best_route) if best_route else nodes
+        to_node = manager.IndexToNode(to_index)
+
+        from_location = locations[from_node]
+
+        to_location = locations[to_node]
+
+        return int(
+            distance_matrix[from_location][to_location]
+        )
+
+    transit_callback_index = (
+        routing.RegisterTransitCallback(
+            distance_callback
+        )
+    )
+
+    routing.SetArcCostEvaluatorOfAllVehicles(
+        transit_callback_index
+    )
+
+    # SEARCH PARAMETERS
+
+    search_parameters = (
+        pywrapcp.DefaultRoutingSearchParameters()
+    )
+
+    search_parameters.first_solution_strategy = (
+        routing_enums_pb2.FirstSolutionStrategy
+        .PATH_CHEAPEST_ARC
+    )
+
+    # SOLVE
+
+    solution = routing.SolveWithParameters(
+        search_parameters
+    )
+
+    # IF NO SOLUTION
+
+    if solution is None:
+
+        return locations
+
+    # EXTRACT ROUTE
+
+    index = routing.Start(0)
+
+    optimized_route = []
+
+    while not routing.IsEnd(index):
+
+        node_index = manager.IndexToNode(index)
+
+        optimized_route.append(
+            locations[node_index]
+        )
+
+        index = solution.Value(
+            routing.NextVar(index)
+        )
+
+    return optimized_route
