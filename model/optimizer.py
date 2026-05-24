@@ -4,9 +4,8 @@ from ortools.constraint_solver import (
 )
 
 
-# ==========================================
 # SOLVE ROUTE USING OR-TOOLS
-# ==========================================
+
 
 def solve_route(distance_matrix):
 
