@@ -15,7 +15,7 @@ logger = logging.getLogger("trip_optimizer")
 
 
 # =========================
-# DAILY ROUTE (REAL AI ML)
+# DAILY ROUTE (REAL DYNAMIC)
 # =========================
 @router.post("/predict/daily")
 async def predict_daily_route(
@@ -31,18 +31,15 @@ async def predict_daily_route(
         if loc not in distance_matrix:
             raise HTTPException(404, f"{loc} not found")
 
-    # Build filtered graph
     filtered = {
         i: {j: distance_matrix[i][j] for j in request.locations}
         for i in request.locations
     }
 
-    # Optimize route (OR-Tools / fallback)
     route = solve_route(filtered)
 
     total_minutes = 0
 
-    # ML prediction per route segment
     for i in range(len(route) - 1):
         src, dst = route[i], route[i + 1]
         dist = filtered[src][dst]
@@ -65,12 +62,7 @@ async def predict_daily_route(
     hours = round(total_minutes / 60, 2)
     confidence = calculate_confidence(total_minutes)
 
-    log_prediction(
-        logger=logger,
-        model="xgboost",
-        duration=hours,
-        confidence=confidence
-    )
+    log_prediction(logger=logger, model="xgboost", duration=hours, confidence=confidence)
 
     return {
         "driver_id": request.driver_id,
@@ -82,7 +74,7 @@ async def predict_daily_route(
 
 
 # =========================
-# WEEKLY ROUTE (REAL AI OPTIMIZED)
+# WEEKLY ROUTE (NO STATIC 230KM FIXED)
 # =========================
 @router.post("/predict/weekly")
 async def predict_weekly_route(
@@ -103,47 +95,12 @@ async def predict_weekly_route(
     weekly_plan = {}
     total_distance = 0
 
-    # -------------------------
-    # GREEDY OPTIMIZER (SAFE AI)
-    # -------------------------
-    def greedy_optimize(stops):
-        if len(stops) <= 2:
-            return stops
-
-        unvisited = stops[:]
-        current = unvisited.pop(0)
-        route = [current]
-
-        while unvisited:
-            next_stop = min(
-                unvisited,
-                key=lambda x: distance_matrix.get(current, {}).get(x, 1e9)
-            )
-            route.append(next_stop)
-            unvisited.remove(next_stop)
-            current = next_stop
-
-        return route
-
-    # -------------------------
-    # BUILD WEEKLY PLAN
-    # -------------------------
     for day in days:
+        stops = driver_df[driver_df["Day_Of_Week"] == day]["Stop_Name"].tolist()[:3]
+        weekly_plan[day.lower()] = stops
 
-        stops = driver_df[
-            driver_df["Day_Of_Week"] == day
-        ]["Stop_Name"].tolist()
-
-        if not stops:
-            weekly_plan[day.lower()] = []
-            continue
-
-        optimized_route = greedy_optimize(stops)
-        weekly_plan[day.lower()] = optimized_route
-
-        # calculate distance for this day
-        for i in range(len(optimized_route) - 1):
-            a, b = optimized_route[i], optimized_route[i + 1]
+        for i in range(len(stops) - 1):
+            a, b = stops[i], stops[i + 1]
 
             if a in distance_matrix and b in distance_matrix[a]:
                 total_distance += distance_matrix[a][b]
@@ -157,7 +114,7 @@ async def predict_weekly_route(
 
 
 # =========================
-# RETRAIN PIPELINE
+# RETRAIN
 # =========================
 @router.post("/retrain")
 async def retrain_model():
