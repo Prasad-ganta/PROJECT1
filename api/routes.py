@@ -1,22 +1,36 @@
 from fastapi import APIRouter, Depends, HTTPException
 from api.schemas import DailyRouteRequest, WeeklyRouteRequest
-from api.dependencies import get_distance_matrix, get_xgboost_model
+
+from api.dependencies import (
+    get_distance_matrix,
+    get_xgboost_model
+)
 
 from model.optimizer import solve_route
 from model.confidence import calculate_confidence
 from model.monitoring import log_prediction
+from model.visualization import visualize_route_map
 
 import pandas as pd
 import numpy as np
+import subprocess
 import logging
 
 router = APIRouter()
 logger = logging.getLogger("trip_optimizer")
 
 
-# =========================
-# DAILY ROUTE (REAL DYNAMIC)
-# =========================
+# =====================
+# HEALTH
+# =====================
+@router.get("/health")
+async def health():
+    return {"status": "ok"}
+
+
+# =====================
+# DAILY ROUTE
+# =====================
 @router.post("/predict/daily")
 async def predict_daily_route(
     request: DailyRouteRequest,
@@ -24,102 +38,126 @@ async def predict_daily_route(
     xgb_model=Depends(get_xgboost_model)
 ):
 
-    if not request.locations:
-        raise HTTPException(400, "locations required")
+    # ---------------------
+    # FILTER DISTANCE MATRIX
+    # ---------------------
+    filtered_matrix = {}
 
-    for loc in request.locations:
-        if loc not in distance_matrix:
-            raise HTTPException(404, f"{loc} not found")
+    for src in request.locations:
+        if src not in distance_matrix:
+            raise HTTPException(404, f"{src} not found")
 
-    filtered = {
-        i: {j: distance_matrix[i][j] for j in request.locations}
-        for i in request.locations
+        filtered_matrix[src] = {}
+
+        for dst in request.locations:
+            if dst not in distance_matrix[src]:
+                raise HTTPException(404, f"{src}->{dst} not found")
+
+            filtered_matrix[src][dst] = distance_matrix[src][dst]
+
+    # ---------------------
+    # OPTIMIZE ROUTE
+    # ---------------------
+    optimized_route = solve_route(filtered_matrix)
+
+    # ---------------------
+    # ETA PREDICTION
+    # ---------------------
+    total_eta = 0
+
+    for _ in range(len(optimized_route) - 1):
+        features = np.array([[10, 0, 1, 0, 30, 0, 0, 25, 5, 10]])
+        total_eta += xgb_model.predict(features)[0]
+
+    predicted_hours = round(total_eta / 60, 2)
+
+    # ---------------------
+    # CONFIDENCE
+    # ---------------------
+    confidence = calculate_confidence(total_eta)
+
+    # ---------------------
+    # COORDINATES (replace with DB or Google API later)
+    # ---------------------
+    coordinates = {
+        "Shopping Center": [17.4450, 78.5270],
+        "Hub West": [17.3950, 78.4300],
+        "Store C": [17.3750, 78.4800],
+        "Depot B": [17.3450, 78.4550],
     }
 
-    route = solve_route(filtered)
+    # ---------------------
+    # MAP GENERATION
+    # ---------------------
+    map_url = visualize_route_map(optimized_route, coordinates)
 
-    total_minutes = 0
+    # ---------------------
+    # LOGGING
+    # ---------------------
+    log_prediction(
+        logger=logger,
+        model="xgboost",
+        duration=predicted_hours,
+        confidence=confidence
+    )
 
-    for i in range(len(route) - 1):
-        src, dst = route[i], route[i + 1]
-        dist = filtered[src][dst]
-
-        features = np.array([[
-            dist,
-            0,
-            1,
-            0,
-            30,
-            0,
-            0,
-            dist / 2,
-            len(route),
-            1
-        ]])
-
-        total_minutes += float(xgb_model.predict(features)[0])
-
-    hours = round(total_minutes / 60, 2)
-    confidence = calculate_confidence(total_minutes)
-
-    log_prediction(logger=logger, model="xgboost", duration=hours, confidence=confidence)
-
+    # ---------------------
+    # RESPONSE
+    # ---------------------
     return {
         "driver_id": request.driver_id,
         "date": request.date,
-        "recommended_route": route,
-        "predicted_time": f"{hours} hours",
-        "confidence": confidence
+        "recommended_route": optimized_route,
+        "predicted_time": f"{predicted_hours} hours",
+        "confidence": confidence,
+        "map_url": map_url
     }
 
 
-# =========================
-# WEEKLY ROUTE (NO STATIC 230KM FIXED)
-# =========================
+# =====================
+# WEEKLY ROUTE
+# =====================
 @router.post("/predict/weekly")
-async def predict_weekly_route(
-    request: WeeklyRouteRequest,
-    distance_matrix=Depends(get_distance_matrix)
-):
+async def predict_weekly_route(request: WeeklyRouteRequest):
 
     df = pd.read_csv("data/raw/trips.csv")
     df.columns = df.columns.str.strip()
 
-    driver_df = df[df.iloc[:, 0] == request.driver_id]
+    driver_col = df.columns[0]
+    driver_df = df[df[driver_col] == request.driver_id]
 
     if driver_df.empty:
         raise HTTPException(404, "Driver not found")
 
     days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
 
-    weekly_plan = {}
-    total_distance = 0
-
-    for day in days:
-        stops = driver_df[driver_df["Day_Of_Week"] == day]["Stop_Name"].tolist()[:3]
-        weekly_plan[day.lower()] = stops
-
-        for i in range(len(stops) - 1):
-            a, b = stops[i], stops[i + 1]
-
-            if a in distance_matrix and b in distance_matrix[a]:
-                total_distance += distance_matrix[a][b]
+    weekly_plan = {
+        day.lower(): driver_df[
+            driver_df["Day_Of_Week"] == day
+        ]["Stop_Name"].head(3).tolist()
+        for day in days
+    }
 
     return {
         "driver_id": request.driver_id,
         "week": request.week,
         **weekly_plan,
-        "weekly_distance_km": round(total_distance / 1000, 2)
+        "weekly_distance": "dynamic"
     }
 
 
-# =========================
-# RETRAIN
-# =========================
+# =====================
+# RETRAIN MODEL
+# =====================
 @router.post("/retrain")
 async def retrain_model():
-    import subprocess
 
-    subprocess.Popen(["python", "scripts/retrain_pipeline.py"])
+    subprocess.Popen([
+        "python",
+        "scripts/retrain_pipeline.py"
+    ])
 
-    return {"status": "success"}
+    return {
+        "status": "success",
+        "message": "Model retraining started"
+    }
