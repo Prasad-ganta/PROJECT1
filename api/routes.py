@@ -41,39 +41,35 @@ async def predict_daily_route(
         if loc not in distance_matrix:
             raise HTTPException(404, f"{loc} not found")
 
-    # build filtered matrix
     filtered = {
-        i: {j: distance_matrix[i][j] for j in request.locations if j in distance_matrix[i]}
+        i: {j: distance_matrix[i][j] for j in request.locations}
         for i in request.locations
     }
 
     route = solve_route(filtered)
 
     total_minutes = 0
-    coords = {}
-
-    # create fake coordinates if not provided (IMPORTANT)
-    base_lat, base_lon = 17.0, 82.0
-
-    for idx, loc in enumerate(route):
-        coords[loc] = (base_lat + idx * 0.01, base_lon + idx * 0.01)
 
     for i in range(len(route) - 1):
         src, dst = route[i], route[i + 1]
-
-        dist = safe_distance(distance_matrix, src, dst)
-        if dist is None:
-            dist = 2.0  # fallback km
+        dist = filtered[src][dst]
 
         features = np.array([[dist, 0, 1, 0, 30, 0, 0, dist / 2, len(route), 1]])
 
-        pred = xgb_model.predict(features)[0]
-        total_minutes += float(pred)
+        total_minutes += float(xgb_model.predict(features)[0])
 
     hours = round(total_minutes / 60, 2)
     confidence = calculate_confidence(total_minutes)
 
-    map_url = visualize_route_map(route, coords)
+    log_prediction(logger=logger, model="xgboost", duration=hours, confidence=confidence)
+
+    # -----------------------------
+    # MAP GENERATION (SAFE)
+    # -----------------------------
+    google_map_url, dashboard_map_url = visualize_route_map(
+        route,
+        distance_matrix  # using coords fallback (IMPORTANT)
+    )
 
     return {
         "driver_id": request.driver_id,
@@ -81,10 +77,11 @@ async def predict_daily_route(
         "recommended_route": route,
         "predicted_time": f"{hours} hours",
         "confidence": confidence,
-        "map_url": map_url
+
+        # ✅ BOTH MAPS
+        "map_url": google_map_url,
+        "route_preview": dashboard_map_url
     }
-
-
 # =========================
 # WEEKLY ROUTE (FIXED REALISTIC)
 # =========================
