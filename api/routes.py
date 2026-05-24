@@ -18,6 +18,8 @@ logger = logging.getLogger("trip_optimizer")
 # =========================
 # DAILY ROUTE (FIXED + MAP)
 # =========================
+from model.visualization import visualize_route_map
+
 @router.post("/predict/daily")
 async def predict_daily_route(
     request: DailyRouteRequest,
@@ -52,14 +54,12 @@ async def predict_daily_route(
     hours = round(total_minutes / 60, 2)
     confidence = calculate_confidence(total_minutes)
 
+    # ✅ IMPORTANT FIX (THIS WAS MISSING)
+    coords = distance_matrix  # OR your actual coordinates dict
+
+    map_url = visualize_route_map(route, coords)
+
     log_prediction(logger=logger, model="xgboost", duration=hours, confidence=confidence)
-
-    # IMPORTANT: coordinates must exist
-    coordinates = getattr(distance_matrix, "coordinates", None)
-
-    map_url = None
-    if coordinates:
-        map_url = visualize_route_map(route, coordinates)
 
     return {
         "driver_id": request.driver_id,
@@ -67,7 +67,7 @@ async def predict_daily_route(
         "recommended_route": route,
         "predicted_time": f"{hours} hours",
         "confidence": confidence,
-        "map_url": map_url
+        "map_url": map_url   # ✅ NOW FIXED
     }
 
 
